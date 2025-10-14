@@ -1,0 +1,116 @@
+import com.github.davidmc24.gradle.plugin.avro.GenerateAvroJavaTask
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version "${springBootVersion}"
+    id 'io.spring.dependency-management' version "${springDependencyManagementVersion}"
+    id "org.openapi.generator" version "${openApiGeneratorVersion}"
+    id "com.github.davidmc24.gradle.plugin.avro" version "${avroPluginVersion}"
+    id "org.sonarqube" version "${sonarqubeVersion}"
+    id "jacoco"
+    id "com.diffplug.spotless" version "${spotlessVersion}"
+}
+
+group = 'com.patientpoint'
+version = '0.0.1-SNAPSHOT'
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(javaVersion.toInteger())
+	}
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://repo.spring.io/snapshot' }
+
+    maven { url "https://packages.confluent.io/maven/" }
+    gradlePluginPortal()
+    google()
+    maven {
+        url "${artifactory_url}/pt-gradle-release-local"
+        credentials {
+            username = System.getenv('ARTIFACTORY_USER')
+            password = System.getenv('ARTIFACTORY_PASS')
+        }
+    }
+    maven {
+        url "${artifactory_url}/pt-gradle-snapshot-local"
+        credentials {
+            username = System.getenv('ARTIFACTORY_USER')
+            password = System.getenv('ARTIFACTORY_PASS')
+        }
+    }
+}
+
+sourceSets {
+	main {
+		java {
+			srcDirs("$buildDir/generated/openapi/src/main/java")
+		}
+	}
+}
+
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    implementation 'org.springframework.kafka:spring-kafka'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+tasks.named('test') { useJUnitPlatform() }
+
+
+
+jacoco {
+    toolVersion = "${jacocoToolsVersion}"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+}
+
+sonar {
+    properties {
+        property "sonar.projectName", "two-cents"
+        property "sonar.projectKey", "two-cents"
+        property "sonar.host.url", "https://sonarqube.shared.patientpoint.io/"
+        property "sonar.sourceEncoding", "UTF-8"
+        property "sonar.jacoco.reportPath", "**/build/jacoco/test.exec"
+        property "sonar.exclusions", "**/thirdparty/**,**/*.properties,**/*.yml,**/config/**,**/dto/**,**/exception/**,**/util/**,**/avro/**,**/openapi/**,**/changelogs/**"
+        property "sonar.test.exclusions", "**/migrations/**"
+        property "sonar.java.coveragePlugin", "jacoco"
+        property "sonar.binaries", "**/build/classes"
+        property "sonar.tests", "src/test"
+        property "sonar.dynamicAnalysis", "reuseReports"
+        property "sonar.junit.reportsPath", "${buildDir}/test-results/test"
+        property "sonar.qualitygate.wait", true
+        property "sonar.issue.ignore.multicriteria", "e1,e2"
+        //Suppress "Field dependency injection should be avoided"
+        property "sonar.issue.ignore.multicriteria.e1.ruleKey", "java:S6813"
+        property "sonar.issue.ignore.multicriteria.e1.resourceKey", "**/*.java"
+        //Suppress "Methods should not have too many parameters:java:S107"
+        property "sonar.issue.ignore.multicriteria.e2.ruleKey", "java:S107"
+        property "sonar.issue.ignore.multicriteria.e2.resourceKey", "**/*.java"
+
+    }
+}
+
+spotless {
+    java {
+        target project.fileTree(project.rootDir) {
+            include 'src/**/*.java'
+            exclude 'build'
+        }
+        importOrder()
+        googleJavaFormat()
+        removeUnusedImports()
+    }
+}
+
+tasks.compileJava.dependsOn tasks.generateAvro, tasks.openApiGenerate, tasks.spotlessCheck
+tasks.test.finalizedBy tasks.jacocoTestReport
+tasks.sonar.dependsOn tasks.jacocoTestReport
