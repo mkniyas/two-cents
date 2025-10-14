@@ -1,0 +1,82 @@
+name: Enforce PR Title Format
+
+on:
+pull_request:
+types: [ opened, edited, synchronize ]
+
+jobs:
+pr-title-check:
+runs-on: ubuntu-latest
+steps:
+- name: Check PR title validity
+id: title_check
+env:
+PR_TITLE: ${{ github.event.pull_request.title }}
+run: |
+echo "PR Title: $PR_TITLE"
+if [[ "$PR_TITLE" =~ ^\[(CS|CW)-[0-9]+\]\ .+ ]]; then
+echo "valid=true" >> "$GITHUB_OUTPUT"
+else
+echo "valid=false" >> "$GITHUB_OUTPUT"
+fi
+
+- name: Handle PR title comment
+uses: actions/github-script@v7
+env:
+PR_TITLE: ${{ github.event.pull_request.title }}
+IS_VALID: ${{ steps.title_check.outputs.valid }}
+with:
+script: |
+const identifier = '<!-- pr-title-check -->';
+const issue_number = context.issue.number;
+const owner = context.repo.owner;
+const repo = context.repo.repo;
+
+const { data: comments } = await github.rest.issues.listComments({
+issue_number,
+owner,
+repo,
+});
+
+const matchingComments = comments.filter(c =>
+c.body && c.body.includes(identifier)
+);
+
+const isValid = process.env.IS_VALID === 'true';
+
+if (isValid) {
+// ✅ Title is valid: delete old comments
+for (const comment of matchingComments) {
+await github.rest.issues.deleteComment({
+owner,
+repo,
+comment_id: comment.id,
+});
+}
+} else {
+// ❌ Title invalid: post comment if not already present
+if (matchingComments.length === 0) {
+const body = `
+${identifier}
+
+**❌ Invalid PR Title Format**
+
+Your PR title must match this format:
+
+\`\`\`
+[CS-1234] Description
+[CW-5678] Description
+\`\`\`
+
+Please fix the title and push again ✅
+`;
+await github.rest.issues.createComment({
+issue_number,
+owner,
+repo,
+body,
+});
+}
+// Fail the job to block merge
+core.setFailed("Invalid PR title format.");
+}
