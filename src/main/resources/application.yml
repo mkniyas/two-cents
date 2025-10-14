@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: two-cents
+  profiles:
+    active: local
+  kafka:
+    bootstrap-servers: localhost:29092
+    consumer:
+      group-id: two-cents-group
+      auto-offset-reset: earliest
+    two-cents-topics:
+      content-status: content-status
+      new-topic: new-topic
+    two-cents-consumer-group:
+      content-status-consumer: content-status
+      new-topic-consumer: new-topic
+logging:
+  structured:
+    format:
+      console: logstash
+    json:
+      add:
+        application: ${spring.application.name}
+        environment: ${SPRING_PROFILES_ACTIVE}
+        service: ${spring.application.name}
+      rename:
+        level: logLevel
+        thread_name: thread
+        logger_name: logger
+        level_value: levelValue
+  level:
+    root: info
+    com.ppt: info
