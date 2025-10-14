@@ -1,0 +1,23 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: two-cents
+  profiles:
+    active: local
+  data:
+    mongodb:
+      uri: mongodb://root:secret@localhost:27017
+      database: two-cents
+      ssl:
+        enabled: false
+  kafka:
+    bootstrap-servers: localhost:29092
+    consumer:
+      group-id: two-cents-group
+      auto-offset-reset: earliest
+logging:
+  structured:
+    level:
+      root: debug
+      com.patientpoint: debug
