@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: ens
+  profiles:
+    active: local
+logging:
+  structured:
+    format:
+      console: logstash
+    json:
+      add:
+        application: ${spring.application.name}
+        environment: ${SPRING_PROFILES_ACTIVE}
+        service: ${spring.application.name}
+      rename:
+        level: logLevel
+        thread_name: thread
+        logger_name: logger
+        level_value: levelValue
+  level:
+    root: info
+    com.ppt: info
