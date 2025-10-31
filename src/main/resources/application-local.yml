@@ -1,0 +1,12 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: ens
+  profiles:
+    active: local
+logging:
+  structured:
+    level:
+      root: debug
+      com.patientpoint: debug
