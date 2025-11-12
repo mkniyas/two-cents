@@ -1,2 +1,1 @@
-# two-cents
-two cents description
+# Template not yet created: scaffold/root/README.md.mustache
