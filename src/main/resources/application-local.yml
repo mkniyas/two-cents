@@ -1,0 +1,15 @@
+# Local development configuration
+# This profile is activated when running locally
+
+spring:
+  application:
+    name: poc-service
+
+logging:
+  level:
+    root: INFO
+    com.patientpoint.pocservice: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+
