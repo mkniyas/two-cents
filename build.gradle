@@ -1,0 +1,109 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version "${springbootVersion}"
+    id 'io.spring.dependency-management' version "${springDependencyManagementVersion}"
+    id 'com.diffplug.spotless' version "${spotlessVersion}"
+    id 'org.sonarqube' version "${sonarqubeVersion}"
+    id 'org.openapi.generator' version "${openApiGeneratorVersion}"
+}
+
+group = 'com.patientpoint'
+version = '0.0.1-SNAPSHOT'
+description = 'Spring Boot microservice for PatientPoint platform.'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(javaVersion.toInteger())
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // OpenAPI / Swagger
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
+
+    // Lombok
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// OpenAPI Generator configuration
+openApiGenerate {
+    generatorName.set("spring")
+    inputSpec.set("$rootDir/src/main/resources/openapi/api-spec.yml")
+    outputDir.set("$buildDir/generated")
+    apiPackage.set("com.patientpoint.poc-service.api")
+    modelPackage.set("com.patientpoint.poc-service.model")
+    invokerPackage.set("com.patientpoint.poc-service.generated")
+    configOptions.set([
+        useSpringBoot3: "true",
+        interfaceOnly: "false",
+        useJakartaEe: "true",
+        dateLibrary: "java8",
+        java8: "true",
+        hideGenerationTimestamp: "true",
+        openApiNullable: "false",
+        useTags: "true",
+        library: "spring-boot",
+        generateApiTests: "false",
+        generateModelTests: "false",
+        generateApiDocumentation: "false",
+        generateModelDocumentation: "false"
+    ])
+    globalProperties.set([
+        models: "",
+        apis: "",
+        supportingFiles: "ApiUtil.java"
+    ])
+}
+
+// Include generated sources in compilation
+sourceSets {
+    main {
+        java {
+            srcDirs += "$buildDir/generated/src/main/java"
+        }
+    }
+}
+
+// Make compileJava depend on openApiGenerate
+compileJava.dependsOn tasks.openApiGenerate
+
+// Spotless configuration (exclude generated code)
+spotless {
+    java {
+        target fileTree('.') {
+            include 'src/**/*.java'
+            exclude 'build/generated/**'
+        }
+        googleJavaFormat('1.22.0')
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+// SonarQube configuration
+sonar {
+    properties {
+        property 'sonar.projectKey', 'com.patientpoint:poc-service'
+        property 'sonar.projectName', 'poc-service'
+    }
+}
+
